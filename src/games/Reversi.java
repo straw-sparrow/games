@@ -33,14 +33,18 @@ public class Reversi extends JPanel {
 			{ "1", "・", "・", "・", "・", "・", "・", "・", "・", " " }, 
 			{ "2", "・", "・", "・", "・", "・", "・", "・", "・", " " },
 			{ "3", "・", "・", "・", "・", "・", "・", "・", "・", " " }, 
-			{ "4", "・", "・", "・", "○", "●", "・", "・", "・", " " },
-			{ "5", "・", "・", "・", "●", "○", "・", "・", "・", " " }, 
+			{ "4", "・", "・", "・", "●", "○", "・", "・", "・", " " },
+			{ "5", "・", "・", "・", "○", "●", "・", "・", "・", " " }, 
 			{ "6", "・", "・", "・", "・", "・", "・", "・", "・", " " },
 			{ "7", "・", "・", "・", "・", "・", "・", "・", "・", " " }, 
 			{ "8", "・", "・", "・", "・", "・", "・", "・", "・", " " },
-			{ " ", " ", " ", " ", " ", " ", " ", " ", " ", " " }
-			};
+			{ " ", " ", " ", " ", " ", " ", " ", " ", " ", " " } };
 
+	private int puttableAreaCount = 0;
+	private int blankAreaCount = 0;
+	private int blackCount = 0;
+	private int whiteCount = 0;
+	
 	/**
 	 * コンストラクタ
 	 */
@@ -57,6 +61,65 @@ public class Reversi extends JPanel {
 		initBoardDraw(g);
 		// 駒描画
 		pieceDraw(g);
+
+		// ヒントマス
+		takeHintArea(g);
+
+		// 文字表示
+		Font font = new Font("HGP創英角ﾎﾟｯﾌﾟ体", Font.ITALIC, 40);
+		g.setFont(font);
+		g.setColor(Color.white);
+
+		System.out.println("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+		
+		blankAreaCount = 0;
+		whiteCount = 0;
+		blackCount = 0;
+		for (String[] a : board) {
+			for(String b:a) {
+				System.out.print(b);
+				if("・".equals(b)) {
+					blankAreaCount++;
+				} else if("○".equals(b)) {
+					whiteCount++;
+				} else if("●".equals(b)) {
+					blackCount++;
+				}
+			}
+			System.out.println();
+		}
+		
+		if(puttableAreaCount == 0) {
+			if(blankAreaCount == 0) {
+				g.drawString(whiteCount == blackCount ? "引き分け" : (whiteCount > blackCount ? "白" : "黒") + "の勝ち！", cellSize * 4, cellSize/2);
+			} else {
+				bwTurn = !bwTurn;
+				repaint();
+			}
+		} else {
+			g.drawString((bwTurn ? "白" : "黒") + "のターン", cellSize * 4, cellSize/2);
+		}
+
+	}
+
+	/**
+	 * ヒント描画
+	 */
+	private void takeHintArea(Graphics g) {
+		puttableAreaCount = 0;
+		for (int iy = 0; iy < board.length; iy++) {
+			for (int jx = 0; jx < board[iy].length; jx++) {
+				if (board[jx][iy] == "・") {
+					for (int i = 0; i < 8; i++) {
+						int r = countFlip(iy, jx, bwTurn, dr[i], dc[i]);
+						if (r > 0) {
+							showCanPutArea(iy + "," + jx, g);
+							puttableAreaCount++;
+						}
+					}
+				}
+			}
+		}
 
 	}
 
@@ -91,15 +154,15 @@ public class Reversi extends JPanel {
 	}
 
 	/**
-	 * 初期駒描画
+	 * 駒描画
 	 */
 	private void pieceDraw(Graphics g) {
 		for (int iy = 0; iy < board.length; iy++) {
 			for (int jx = 0; jx < board[iy].length; jx++) {
-				if (board[iy][jx] == "○") {
+			if ("○".equals(board[iy][jx])) {
 					// 白丸
 					putWhitePiece(jx + "," + iy, g);
-				} else if (board[iy][jx] == "●") {
+				} else if ("●".equals(board[iy][jx])) {
 					// 黒丸
 					putBlackPiece(jx + "," + iy, g);
 				}
@@ -113,6 +176,16 @@ public class Reversi extends JPanel {
 	private void putPiece(int x, int y, Color c, Graphics g) {
 		g.setColor(c);
 		g.fillOval(x + masuyohaku, y + masuyohaku, cellSize - masuyohaku * 2, cellSize - masuyohaku * 2);
+	}
+
+	/**
+	 * ヒントマス
+	 */
+	private void showCanPutArea(String cellAddress, Graphics g) {
+		String[] address = cellAddress.split(",");
+		int x = Integer.parseInt(address[0]);
+		int y = Integer.parseInt(address[1]);
+		putPiece(cellSize * x, cellSize * y, new Color(0, 158, 210), g);
 	}
 
 	/**
@@ -169,10 +242,10 @@ public class Reversi extends JPanel {
 		int c = col + dc;
 		// 盤からはみ出さない間繰り返す
 		while (0 <= r && r < board[0].length && 0 <= c && c < board.length) {
-			if (board[c][r] == puttablePiece(!bwTurn)) {
+			if (board[c][r].equals(puttablePiece(!bwTurn))) {
 				// 相手の石なら countを1増やす
 				count++;
-			} else if (board[c][r] == puttablePiece(bwTurn)) {
+			} else if (board[c][r].equals(puttablePiece(bwTurn))) {
 				// 自分の石なら count を返して終了
 				return count;
 			} else {
@@ -190,7 +263,7 @@ public class Reversi extends JPanel {
 	private boolean canPut(int row, int col, boolean bwTurn) {
 		boolean result = false;
 		// その場所が空でなかった置けない
-		if (board[col][row] == "・") {
+		if ("・".equals(board[col][row])) {
 			// どこかの方向でひっくりかせれば OK
 			for (int i = 0; i < 8; i++) {
 				if (countFlip(row, col, bwTurn, dr[i], dc[i]) > 0) {
@@ -223,17 +296,11 @@ public class Reversi extends JPanel {
 	}
 
 	private String opponent(String piece) {
-		return piece == "●" ? "○" : "●";
+		return "●".equals(piece) ? "○" : "●";
 	}
 
 	private String puttablePiece(boolean bwTurn) {
-		if (bwTurn) {
-			// 白ターン
-			return "○";
-		} else {
-			// 黒ターン
-			return "●";
-		}
+		return bwTurn ? "○" : "●";
 	}
 
 	/**
@@ -241,8 +308,11 @@ public class Reversi extends JPanel {
 	 */
 	public static void main(String[] args) {
 		JFrame f = new JFrame();
+		f.setTitle("reversi");
 		f.getContentPane().setLayout(new FlowLayout());
-		f.getContentPane().add(new Reversi());
+
+		JPanel jp = new Reversi();
+		f.getContentPane().add(jp);
 		f.pack();
 		f.setResizable(false);
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
